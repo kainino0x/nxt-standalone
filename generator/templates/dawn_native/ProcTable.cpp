@@ -55,6 +55,7 @@ namespace dawn_native {
                         (void) self;
                     {% endif %}
                     bool error = false;
+                    (void) error;
                     {% for arg in method.arguments %}
                         {% set cppType = as_cppType(arg.type.name) %}
                         {% set argName = as_varName(arg.name) %}
