@@ -1,37 +1,60 @@
-vars = {
-  'chromium_git': 'https://chromium.googlesource.com',
-  'github_git': 'https://github.com',
+class Host():
+  def __init__(self, name, url):
+    self.name = name
+    self.url = url
+host_chromium = Host('chromium_git', 'https://chromium.googlesource.com')
+host_github = Host('github_git', 'https://github.com')
+hosts = [
+  host_chromium,
+  host_github,
+]
 
+class Dep():
+  def __init__(self, dest, host, repo, standalone_only, ref):
+    self.dest = dest
+    self.host = host
+    self.repo = repo
+    self.standalone_only = standalone_only
+    self.ref = ref
+
+dawn_deps = [
+  # Dependencies required to use GN/Clang in standalone
+  Dep('build', host_chromium, 'chromium/src/build.git', True,
+    'b944b99e72923c5a6699235ed858e725db21f81f'),
+  Dep('buildtools', host_chromium, 'chromium/buildtools.git', True,
+    '94288c26d2ffe3aec9848c147839afee597acefd'),
+  Dep('tools/clang', host_chromium, 'chromium/src/tools/clang.git', True,
+    'c893c7eec4706f8c7fc244ee254b1dadd8f8d158'),
+  # GTest and GMock
+  Dep('testing', host_chromium, 'chromium/src/testing.git', True,
+    '4d706fd80be9e8989aec5235540e7b46d0672826'),
+  # SPIRV-Cross
+  Dep('third_party/spirv-cross', host_github, 'Kangz/SPIRV-Cross.git', False,
+    '694cad533296df02b4562f4a5a20cba1d1a9dbaf'),
+]
+
+def dawn_add_hosts(vars, hosts):
+  for host in hosts:
+    vars[host.name] = host.url
+
+def dawn_add_deps(deps, dawn_deps):
+  for dawn_dep in dawn_deps:
+    dep = {
+      'url': '{{{0.host.name}}}/{0.repo}@{0.ref}'.format(dawn_dep),
+    }
+    if dawn_dep.standalone_only:
+      dep['condition'] = 'dawn_standalone'
+    deps['{dawn_root}/' + dawn_dep.dest] = dep
+
+vars = {
   'dawn_root': '.',
   'dawn_standalone': True,
 }
+dawn_add_hosts(vars, hosts)
 
 deps = {
-  # Dependencies required to use GN/Clang in standalone
-  '{dawn_root}/build': {
-    'url': '{chromium_git}/chromium/src/build.git@b944b99e72923c5a6699235ed858e725db21f81f',
-    'condition': 'dawn_standalone',
-  },
-  '{dawn_root}/buildtools': {
-    'url': '{chromium_git}/chromium/buildtools.git@94288c26d2ffe3aec9848c147839afee597acefd',
-    'condition': 'dawn_standalone',
-  },
-  '{dawn_root}/tools/clang': {
-    'url': '{chromium_git}/chromium/src/tools/clang.git@c893c7eec4706f8c7fc244ee254b1dadd8f8d158',
-    'condition': 'dawn_standalone',
-  },
-
-  # GTest and GMock
-  '{dawn_root}/testing': {
-    'url': '{chromium_git}/chromium/src/testing@4d706fd80be9e8989aec5235540e7b46d0672826',
-    'condition': 'dawn_standalone',
-  },
-
-  # SPIRV-Cross
-  '{dawn_root}/third_party/spirv-cross': {
-    'url': '{github_git}/Kangz/SPIRV-Cross.git@694cad533296df02b4562f4a5a20cba1d1a9dbaf',
-  },
 }
+dawn_add_deps(deps, dawn_deps)
 
 hooks = [
   # Pull clang-format binaries using checked-in hashes.
