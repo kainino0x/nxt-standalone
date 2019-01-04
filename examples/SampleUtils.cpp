@@ -52,6 +52,8 @@ enum class CmdBufType {
     static utils::BackendType backendType = utils::BackendType::OpenGL;
 #elif defined(DAWN_ENABLE_BACKEND_VULKAN)
     static utils::BackendType backendType = utils::BackendType::Vulkan;
+#elif defined(DAWN_ENABLE_BACKEND_NULL)
+    static utils::BackendType backendType = utils::BackendType::Null;
 #else
     #error
 #endif

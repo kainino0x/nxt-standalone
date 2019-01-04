@@ -1,0 +1,16 @@
+{
+  "name": "dawn",
+  "version": "0.1.0",
+  "description": "",
+  "scripts": {
+    "configure": "node-gyp configure",
+    "build": "node-gyp build",
+    "test": "node test.js"
+  },
+  "author": "Kai Ninomiya <kainino@chromium.org>",
+  "private": true,
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "node-gyp": "^3.8.0"
+  }
+}
