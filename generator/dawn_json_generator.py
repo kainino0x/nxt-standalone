@@ -51,6 +51,14 @@ class Name:
     def snake_case(self):
         return '_'.join(self.chunks)
 
+    def js_enum_case(self):
+        result = self.chunks[0].lower()
+        for chunk in self.chunks[1:]:
+            if not result[-1].isdigit():
+                result += '-'
+            result += chunk.lower()
+        return result
+
 def concat_names(*names):
     return ' '.join([name.canonical_case() for name in names])
 
@@ -61,11 +69,16 @@ class Type:
         self.name = Name(name, native=native)
         self.category = json_data['category']
 
-EnumValue = namedtuple('EnumValue', ['name', 'value', 'valid'])
+EnumValue = namedtuple('EnumValue', ['name', 'value', 'valid', 'jsrepr'])
 class EnumType(Type):
     def __init__(self, name, json_data):
         Type.__init__(self, name, json_data)
-        self.values = [EnumValue(Name(m['name']), m['value'], m.get('valid', True)) for m in self.json_data['values']]
+        self.values = [EnumValue(
+            Name(m['name']),
+            m['value'],
+            m.get('valid', True),
+            m.get('jsrepr', None)) for m in self.json_data['values']]
+        self.javascript = self.json_data.get('javascript', True)
 
         # Assert that all values are unique in enums
         all_values = set()
@@ -377,6 +390,10 @@ def as_cppType(name):
     else:
         return name.CamelCase()
 
+def as_jsEnumValue(value):
+    if value.jsrepr: return value.jsrepr
+    return "'" + value.name.js_enum_case() + "'"
+
 def convert_cType_to_cppType(typ, annotation, arg, indent=0):
     if typ.category == 'native':
         return arg
@@ -522,6 +539,7 @@ class MultiGeneratorFromDawnJSON(Generator):
             'as_cType': as_cType,
             'as_cTypeDawn': as_cTypeDawn,
             'as_cppType': as_cppType,
+            'as_jsEnumValue': as_jsEnumValue,
             'convert_cType_to_cppType': convert_cType_to_cppType,
             'as_varName': as_varName,
             'decorate': decorate,
@@ -543,6 +561,10 @@ class MultiGeneratorFromDawnJSON(Generator):
 
         if 'dawncpp' in targets:
             renders.append(FileRender('webgpu_cpp.cpp', 'src/dawn/webgpu_cpp.cpp', [base_params, api_params]))
+
+        if 'emscripten_bits' in targets:
+            renders.append(FileRender('api_struct_info.json', 'src/dawn/webgpu_struct_info.json', [base_params, api_params]))
+            renders.append(FileRender('library_webgpu_enum_tables.js', 'src/dawn/library_webgpu_enum_tables.js', [base_params, api_params]))
 
         if 'mock_webgpu' in targets:
             mock_params = [
